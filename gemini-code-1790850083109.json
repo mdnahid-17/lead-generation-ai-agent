@@ -1,0 +1,470 @@
+{
+  "name": "Lead Genration Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "actorSource": "store",
+        "actorId": {
+          "__rl": true,
+          "value": "https://console.apify.com/actors/2Mdma1N6Fd0y3QEjR/input",
+          "mode": "url"
+        },
+        "customBody": "={\n  \"searchStringsArray\": [\n    \"{{ $json.body.query }}\"\n  ],\n  \"locationQuery\": \"{{ $json.body.location }}\",\n  \"maxCrawledPlacesPerSearch\": {{ $json.body.numberOfResults }}\n}"
+      },
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        96,
+        -160
+      ],
+      "id": "a32ff3c3-221f-4961-a8a5-92f6643c38ec",
+      "name": "Run an Actor",
+      "notesInFlow": false,
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "resource": "Datasets",
+        "datasetId": "={{ $json.defaultDatasetId }}",
+        "options": {}
+      },
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        320,
+        -160
+      ],
+      "id": "9dc411da-0d39-4d5e-82e8-1ec736f0606e",
+      "name": "Get dataset items",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b91945b4-3a52-4a0a-95db-589baa533adc",
+              "leftValue": "={{ $json.permanentlyClosed }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "dc193988-208b-4290-8198-0cfb51eb4d71",
+              "leftValue": "={{ $json.temporarilyClosed }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        544,
+        -160
+      ],
+      "id": "6f19af26-e88d-4c5f-b652-ba15de4f98cb",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        768,
+        -160
+      ],
+      "id": "44ab392c-96df-4d42-9424-7238c63a9900",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Please analyze this business data and output the result in JSON format:\n\nBusiness Name: {{ $json.title }}\nCategory: {{ $json.categoryName }}\nWebsite: {{ $json.website }}\nRating: {{ $json.totalScore }}\nReviews Count: {{ $json.reviewsCount }}\n\nFormat the output strictly as JSON with these keys:\n{\n  \"business_name\": \"string\",\n  \"category\": \"string\",\n  \"website\": \"string\",\n  \"rating\": \"number or null\",\n  \"is_good_lead\": true/false,\n  \"reason\": \"string\",\n  \"potential_need\": \"string\",\n  \"outreach_angle\": \"string\"\n}\n",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are a professional Lead Generation AI Agent.\n\nYour task is to analyze the provided business data in the User Prompt and generate high-quality, clean, and actionable leads for outreach.\n\nResponsibilities:\n1. Identify whether the business is a potential high-quality lead based on having a website, clear service category, and good ratings (4.0+).\n2. Enrich the lead by identifying potential needs (e.g., marketing, automation, AI tools).\n3. Generate a short outreach insight on how an AI/automation solution could help.\n\nFormatting Rules:\n- Do NOT hallucinate missing data.\n- Keep explanations short and professional.\n- Output ONLY valid JSON matching the requested schema.\n- Make each output unique and specific to the business."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        992,
+        -160
+      ],
+      "id": "d2ea70e8-9047-494e-ac67-f654393071e5",
+      "name": "AI Agent",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1YfwU1-UHp9fmAuYDmgzBxSvpOhU8ZxsV_MrfKjL93gc",
+          "mode": "list",
+          "cachedResultName": "Lead Genration Agent",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1YfwU1-UHp9fmAuYDmgzBxSvpOhU8ZxsV_MrfKjL93gc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1YfwU1-UHp9fmAuYDmgzBxSvpOhU8ZxsV_MrfKjL93gc/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Bussiness Details": "={{ $json.output }}",
+            "Bussiness Name": "={{ $('Filter').item.json.title }}",
+            "Domain": "={{ $('Filter').item.json.website }}",
+            "Reviews": "={{ $('Filter').item.json.reviewsCount }}",
+            "Map Details": "={{ $('Filter').item.json.url }}",
+            "Phone": "=\"{{ $('Filter').item.json.phone }} + {{ $('Filter').item.json.phoneUnformatted }}\"",
+            "Address": "={{ $('Filter').item.json.address }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Bussiness Name",
+              "displayName": "Bussiness Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Domain",
+              "displayName": "Domain",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Address",
+              "displayName": "Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Reviews",
+              "displayName": "Reviews",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Map Details",
+              "displayName": "Map Details",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Bussiness Details",
+              "displayName": "Bussiness Details",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1344,
+        -160
+      ],
+      "id": "1e8c1f51-b6d3-486b-ad27-c0bc2b6aa79d",
+      "name": "Append row in sheet",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "47a5bf5e-80ab-4494-a8ac-bf75ee9421e2",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -128,
+        -160
+      ],
+      "id": "6a28dc06-ffd1-4be5-a8c0-b0777ac2700c",
+      "name": "Webhook",
+      "webhookId": "47a5bf5e-80ab-4494-a8ac-bf75ee9421e2"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"success\",\n  \"data\": {{ JSON.stringify($json) }}\n}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1056,
+        -464
+      ],
+      "id": "7544b351-c5ea-4fcb-b19a-d5497269570e",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Webhook').item.json.body.Email }}",
+        "subject": "=New Lead Received - {{ $('Webhook').item.json.body.query }}",
+        "message": "=<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);\">\n  \n  <!-- Header Section -->\n  <div style=\"background-color: #0f172a; padding: 20px; text-align: center; color: #ffffff;\">\n    <h2 style=\"margin: 0; font-size: 22px; font-weight: 600;\">🚀 New Lead Discovered</h2>\n    <p style=\"margin: 5px 0 0; font-size: 13px; color: #94a3b8;\">Lead Generation Automation Insights</p>\n  </div>\n\n  <!-- Main Content -->\n  <div style=\"padding: 24px;\">\n    \n    <!-- Business Info Card -->\n    <table style=\"width: 100%; border-collapse: collapse; margin-bottom: 20px; background-color: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0;\">\n      <tr style=\"border-bottom: 1px solid #f1f5f9;\">\n        <td style=\"padding: 12px 16px; font-weight: bold; color: #475569; width: 30%;\">Company:</td>\n        <td style=\"padding: 12px 16px; color: #0f172a; font-weight: 600;\">{{ $('AI Agent').item.json.output.business_name }}</td>\n      </tr>\n      <tr style=\"border-bottom: 1px solid #f1f5f9;\">\n        <td style=\"padding: 12px 16px; font-weight: bold; color: #475569;\">Category:</td>\n        <td style=\"padding: 12px 16px; color: #0f172a;\">{{ $('AI Agent').item.json.output.category }}</td>\n      </tr>\n      <tr style=\"border-bottom: 1px solid #f1f5f9;\">\n        <td style=\"padding: 12px 16px; font-weight: bold; color: #475569;\">Website:</td>\n        <td style=\"padding: 12px 16px;\"><a href=\"{{ $('AI Agent').item.json.output.website }}\" target=\"_blank\" style=\"color: #2563eb; text-decoration: none;\">{{ $('AI Agent').item.json.output.website }}</a></td>\n      </tr>\n      <tr>\n        <td style=\"padding: 12px 16px; font-weight: bold; color: #475569;\">Rating:</td>\n        <td style=\"padding: 12px 16px; color: #d97706; font-weight: bold;\">⭐{{ $('AI Agent').item.json.output.rating }} </td>\n      </tr>\n\n<tr style=\"border-bottom: 1px solid #f1f5f9;\">\n        <td style=\"padding: 12px 16px; font-weight: bold; color: #475569;\">Phone:</td>\n      </tr>\n\n    </table>\n\n    <!-- AI Analysis Section -->\n    <div style=\"background-color: #ffffff; border-radius: 8px; padding: 18px; border: 1px solid #e2e8f0;\">\n      <h3 style=\"margin-top: 0; color: #1e293b; font-size: 16px; border-bottom: 2px solid #3b82f6; display: inline-block; padding-bottom: 4px;\">🧠 AI Lead Analysis</h3>\n      \n      <div style=\"margin-top: 12px;\">\n        <p style=\"margin: 0 0 6px 0; font-size: 13px; font-weight: bold; color: #64748b; text-transform: uppercase;\">Evaluation Reason</p>\n        <p style=\"margin: 0 0 16px 0; color: #334155; font-size: 14px; line-height: 1.5;\">{{ $json['Bussiness Details'].reason }}</p>\n      </div>\n\n      <div style=\"margin-top: 12px;\">\n        <p style=\"margin: 0 0 6px 0; font-size: 13px; font-weight: bold; color: #64748b; text-transform: uppercase;\">Potential Needs</p>\n        <p style=\"margin: 0 0 16px 0; color: #334155; font-size: 14px; line-height: 1.5;\">{{ $json['Bussiness Details'].potential_need }}</p>\n      </div>\n\n      <div style=\"margin-top: 12px;\">\n        <p style=\"margin: 0 0 6px 0; font-size: 13px; font-weight: bold; color: #64748b; text-transform: uppercase;\">Outreach Strategy</p>\n        <p style=\"margin: 0; color: #334155; font-size: 14px; line-height: 1.5; background-color: #f0fdf4; padding: 10px; border-left: 4px solid #22c55e; border-radius: 4px;\">{{ $json['Bussiness Details'].outreach_angle }}</p>\n      </div>\n    </div>\n\n  </div>\n\n  <!-- Footer -->\n  <div style=\"background-color: #f1f5f9; padding: 12px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0;\">\n    Automated Lead Analysis System • Sent via n8n Workflow\n  </div>\n\n</div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1568,
+        -48
+      ],
+      "id": "9bc7a7a4-924b-414f-ad0a-b5e31f955655",
+      "name": "Send a message",
+      "webhookId": "9aa35060-566f-4a91-b69a-75121ca97a01",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        960,
+        528
+      ],
+      "id": "b5fb0ed7-f770-4f26-a706-662f66309541",
+      "name": "OpenAI Chat Model",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"business_name\": \"Dirk Saecker Real Estate\",\n  \"category\": \"Real Estate Agency\",\n  \"website\": \"http://www.dirkmiami.com/\",\n  \"rating\": 4.8,\n  \"is_good_lead\": true,\n  \"reason\": \"Active real estate business with valid website and high rating.\",\n  \"potential_need\": \"Automated lead generation and fast CRM follow-up system.\",\n  \"outreach_angle\": \"Offer AI chatbot to handle incoming home buyer queries 24/7.\"\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1152,
+        208
+      ],
+      "id": "9f576ead-84ad-451b-9101-bcbf2f42179a",
+      "name": "Structured Output Parser"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run an Actor": {
+      "main": [
+        [
+          {
+            "node": "Get dataset items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get dataset items": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Run an Actor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        []
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Structured Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "3bc29e8b-49d2-47de-a160-052f32b0c3d5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "5f00bba974abf03cb5183d4d65f8a9645a781b04770df6a7d08284fca87d50b3"
+  },
+  "nodeGroups": [],
+  "id": "L3qZKXNKthe07S7j",
+  "tags": []
+}
